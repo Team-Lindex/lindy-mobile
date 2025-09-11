@@ -27,14 +27,14 @@ export default function TabLayout() {
         }),
       }}>
       <Tabs.Screen
-        name="daily"
+        name="index"
         options={{
           title: 'Daily',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="sun.max.fill" color={color} />,
         }}
       />
       <Tabs.Screen
-        name="index"
+        name="wardrobe"
         options={{
           title: 'Wardrobe',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="tshirt.fill" color={color} />,

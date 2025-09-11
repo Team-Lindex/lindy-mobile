@@ -24,7 +24,7 @@ export const mockUsers: User[] = [
     id: 'user_001',
     name: 'Sophia Carter',
     email: 'sophia.carter@example.com',
-    avatar: require('@/assets/images/avatar.png'),
+    avatar: require('@/assets/images/sophia-avatar.png'),
     membershipStatus: 'Premium Member',
   },
   {
