@@ -67,25 +67,25 @@ const backgroundImages = [
 
 const twins = [
   {
-    id: 'user_001',
+    id: '1',
     name: 'Sophia',
     textColor: '#2c3e50',
     image: require('@/assets/images/digital-twin.png'),
   },
   {
-    id: 'user_002',
+    id: '2',
     name: 'Emma',
     textColor: '#ffffff',
     image: require('@/assets/images/digital-twin2.png'),
   },
   {
-    id: 'user_003',
+    id: '3',
     name: 'Alex',
     textColor: '#ffffff',
     image: require('@/assets/images/digital-twin3.png'),
   },
   {
-    id: 'user_004',
+    id: '4',
     name: 'Maya',
     textColor: '#2c3e50',
     image: require('@/assets/images/digital-twin.png'),

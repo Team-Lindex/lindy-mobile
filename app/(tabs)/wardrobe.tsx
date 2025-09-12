@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,28 +9,54 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
+import { fetchUserWardrobe, WardrobeItem, getUniqueWardrobeTypes } from '@/services/wardrobeService';
+import { useUser } from '@/contexts/UserContext';
+import { LazyImage } from '@/components/LazyImage';
 
-const categories = ['All', 'Tops', 'Bottoms', 'Dresses'];
+// Will be populated dynamically from API data
 
-const clothingItems = [
-  { id: 1, image: require('@/assets/images/tops/top6.webp'), category: 'Tops' },
-  { id: 2, image: require('@/assets/images/pants/pant1.webp'), category: 'Bottoms' },
-  { id: 3, image: require('@/assets/images/tops/top1.webp'), category: 'Tops' },
-  { id: 4, image: require('@/assets/images/tops/top2.webp'), category: 'Tops' },
-  { id: 5, image: require('@/assets/images/pants/pant2.webp'), category: 'Bottoms' },
-  { id: 6, image: require('@/assets/images/tops/top3.webp'), category: 'Tops' },
-  { id: 7, image: require('@/assets/images/pants/pant3.webp'), category: 'Bottoms' },
-  { id: 8, image: require('@/assets/images/tops/top4.webp'), category: 'Tops' },
-  { id: 9, image: require('@/assets/images/pants/pant4.webp'), category: 'Bottoms' },
-  { id: 10, image: require('@/assets/images/tops/top5.webp'), category: 'Tops' },
-];
+// Will be fetched from API
 
 export default function WardrobeScreen() {
+  const { currentUser } = useUser();
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadWardrobeData() {
+      if (!currentUser) return;
+      
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Use userId 1 for demo purposes if currentUser.id is not a number
+        const userId = isNaN(Number(currentUser.id)) ? '1' : currentUser.id;
+        const response = await fetchUserWardrobe(userId);
+        
+        if (response.success && response.data) {
+          setWardrobeItems(response.data);
+          setCategories(getUniqueWardrobeTypes(response.data));
+        } else {
+          setError(response.message || 'Failed to load wardrobe items');
+        }
+      } catch (err) {
+        setError('An error occurred while fetching wardrobe data');
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    loadWardrobeData();
+  }, [currentUser]);
 
   const filteredItems = selectedCategory === 'All' 
-    ? clothingItems 
-    : clothingItems.filter(item => item.category === selectedCategory);
+    ? wardrobeItems 
+    : wardrobeItems.filter(item => item.type.trim() === selectedCategory);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,13 +90,36 @@ export default function WardrobeScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.grid}>
-          {filteredItems.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.gridItem}>
-              <Image source={item.image} style={styles.itemImage} />
-            </TouchableOpacity>
-          ))}
-        </View>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>Loading your wardrobe...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : filteredItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <IconSymbol name="tshirt" size={50} color="#ccc" />
+            <Text style={styles.emptyText}>Your wardrobe seems to be empty</Text>
+            <Text style={styles.emptySubText}>Add some items to get started</Text>
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {filteredItems.map((item) => (
+              <TouchableOpacity key={item._id} style={styles.gridItem}>
+                <LazyImage 
+                  source={{ uri: item.imageUrl }} 
+                  style={styles.itemImage} 
+                  resizeMode="cover"
+                  placeholderColor="#f0f0f0"
+                  spinnerColor="#666"
+                  spinnerSize="small"
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -147,5 +196,46 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 12,
     backgroundColor: '#f5f5f5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: 'red',
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+    minHeight: 300,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#666',
+    marginTop: 20,
+    textAlign: 'center',
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

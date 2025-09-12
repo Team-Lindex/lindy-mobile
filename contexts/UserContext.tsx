@@ -21,28 +21,28 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 // Mock users for the hackathon
 export const mockUsers: User[] = [
   {
-    id: 'user_001',
+    id: '1',
     name: 'Sophia Carter',
     email: 'sophia.carter@example.com',
     avatar: require('@/assets/images/sophia-avatar.png'),
     membershipStatus: 'Premium Member',
   },
   {
-    id: 'user_002',
+    id: '2',
     name: 'Emma Johnson',
     email: 'emma.johnson@example.com',
     avatar: require('@/assets/images/avatar2.png'),
     membershipStatus: 'Basic Member',
   },
   {
-    id: 'user_003',
+    id: '3',
     name: 'Alex Thompson',
     email: 'alex.thompson@example.com',
     avatar: require('@/assets/images/react-logo.png'),
     membershipStatus: 'Premium Member',
   },
   {
-    id: 'user_004',
+    id: '4',
     name: 'Maya Patel',
     email: 'maya.patel@example.com',
     avatar: require('@/assets/images/avatar.png'),
