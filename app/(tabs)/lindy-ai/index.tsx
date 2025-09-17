@@ -241,6 +241,29 @@ export default function LindyAIScreen() {
   // Start real voice recognition
   const startListening = async () => {
     try {
+      // MOCK MODE: Simulate voice input after 5 seconds
+      console.log('Mock mode: Starting simulated voice input');
+      
+      // Reset transcribed text and voice attempts
+      setTranscribedText('');
+      setShowConfirmation(false);
+      setVoiceAttempts(0);
+      
+      // Show listening state immediately
+      setIsListening(true);
+      
+      // After 5 seconds, simulate the voice input
+      setTimeout(() => {
+        console.log('Mock: Simulating voice input after 5 seconds');
+        setTranscribedText('give me casual business outfits');
+        setIsListening(false);
+        setShowConfirmation(true);
+      }, 5000);
+      
+      return;
+      
+      // ORIGINAL CODE (commented out for mock mode)
+      /*
       // Check if voice recognition is available
       if (!Voice.isAvailable()) {
         Alert.alert('Not Supported', 'Voice recognition is not available on this platform');
@@ -255,6 +278,7 @@ export default function LindyAIScreen() {
       // Start listening
       await Voice.start('en-US');
       setIsListening(true);
+      */
     } catch (error) {
       console.error('Error starting voice recognition:', error);
       Alert.alert('Error', 'Failed to start voice recognition');
