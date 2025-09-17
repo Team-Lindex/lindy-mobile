@@ -9,9 +9,11 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { fetchUserWardrobe, WardrobeItem, getUniqueWardrobeTypes } from '@/services/wardrobeService';
+import { fetchUserWardrobe, WardrobeItem, getUniqueWardrobeTypes, updateWardrobeItemTags } from '@/services/wardrobeService';
 import { useUser } from '@/contexts/UserContext';
 import { LazyImage } from '@/components/LazyImage';
+import { AddWardrobeItemModal } from '@/components/AddWardrobeItemModal';
+import { EditWardrobeItemModal } from '@/components/EditWardrobeItemModal';
 
 // Will be populated dynamically from API data
 
@@ -24,33 +26,60 @@ export default function WardrobeScreen() {
   const [categories, setCategories] = useState<string[]>(['All']);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<WardrobeItem | null>(null);
+
+  const loadWardrobeData = async () => {
+    if (!currentUser) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Use userId 1 for demo purposes if currentUser.id is not a number
+      const userId = isNaN(Number(currentUser.id)) ? '1' : currentUser.id;
+      const response = await fetchUserWardrobe(userId);
+      
+      if (response.success && response.data) {
+        setWardrobeItems(response.data);
+        setCategories(getUniqueWardrobeTypes(response.data));
+      } else {
+        setError(response.message || 'Failed to load wardrobe items');
+      }
+    } catch (err) {
+      setError('An error occurred while fetching wardrobe data');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleItemPress = (item: WardrobeItem) => {
+    console.log('Item selected:', JSON.stringify(item));
+    setSelectedItem(item);
+    // Ensure state is updated before showing modal
+    setTimeout(() => {
+      setEditModalVisible(true);
+    }, 100);
+  };
+
+  const handleUpdateTags = async (itemId: string, tags: string[]) => {
+    try {
+      const response = await updateWardrobeItemTags(itemId, tags);
+      if (response.success) {
+        // Refresh wardrobe data to show updated tags
+        await loadWardrobeData();
+      } else {
+        console.error('Failed to update tags:', response.message);
+      }
+    } catch (error) {
+      console.error('Error updating tags:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
-    async function loadWardrobeData() {
-      if (!currentUser) return;
-      
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        // Use userId 1 for demo purposes if currentUser.id is not a number
-        const userId = isNaN(Number(currentUser.id)) ? '1' : currentUser.id;
-        const response = await fetchUserWardrobe(userId);
-        
-        if (response.success && response.data) {
-          setWardrobeItems(response.data);
-          setCategories(getUniqueWardrobeTypes(response.data));
-        } else {
-          setError(response.message || 'Failed to load wardrobe items');
-        }
-      } catch (err) {
-        setError('An error occurred while fetching wardrobe data');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    
     loadWardrobeData();
   }, [currentUser]);
 
@@ -62,7 +91,10 @@ export default function WardrobeScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Wardrobe</Text>
-        <TouchableOpacity style={styles.addButton}>
+        <TouchableOpacity 
+          style={styles.addButton}
+          onPress={() => setModalVisible(true)}
+        >
           <IconSymbol name="plus" size={24} color="#000" />
         </TouchableOpacity>
       </View>
@@ -107,7 +139,11 @@ export default function WardrobeScreen() {
         ) : (
           <View style={styles.grid}>
             {filteredItems.map((item) => (
-              <TouchableOpacity key={item._id} style={styles.gridItem}>
+              <TouchableOpacity 
+                key={item._id} 
+                style={styles.gridItem}
+                onPress={() => handleItemPress(item)}
+              >
                 <LazyImage 
                   source={{ uri: item.imageUrl }} 
                   style={styles.itemImage} 
@@ -116,11 +152,31 @@ export default function WardrobeScreen() {
                   spinnerColor="#666"
                   spinnerSize="small"
                 />
+                {item.tags.length > 0 && (
+                  <View style={styles.tagIndicator}>
+                    <Text style={styles.tagCount}>{item.tags.length}</Text>
+                    <IconSymbol name="tag.fill" size={12} color="#fff" />
+                  </View>
+                )}
               </TouchableOpacity>
             ))}
           </View>
         )}
       </ScrollView>
+
+      <AddWardrobeItemModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSuccess={loadWardrobeData}
+      />
+
+      <EditWardrobeItemModal
+        visible={editModalVisible}
+        onClose={() => setEditModalVisible(false)}
+        onSuccess={loadWardrobeData}
+        item={selectedItem}
+        updateItemTags={handleUpdateTags}
+      />
     </SafeAreaView>
   );
 }
@@ -196,6 +252,23 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 12,
     backgroundColor: '#f5f5f5',
+  },
+  tagIndicator: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tagCount: {
+    color: '#fff',
+    fontSize: 12,
+    marginRight: 4,
+    fontWeight: '600',
   },
   loadingContainer: {
     flex: 1,

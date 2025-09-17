@@ -30,35 +30,35 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Daily',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sun.max.fill" color={color} />,
+          tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="sun.max.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="wardrobe"
         options={{
           title: 'Wardrobe',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="tshirt.fill" color={color} />,
+          tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="tshirt.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="rank-outfits"
         options={{
           title: 'Rank Outfits',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="heart.fill" color={color} />,
+          tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="heart.fill" color={color} />,
         }}
       />
       <Tabs.Screen
         name="lindy-ai"
         options={{
           title: 'Lindy AI',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="sparkles" color={color} />,
+          tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="sparkles" color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="person.fill" color={color} />,
+          tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="person.fill" color={color} />,
         }}
       />
     </Tabs>
