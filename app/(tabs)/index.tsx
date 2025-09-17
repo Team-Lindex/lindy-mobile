@@ -12,7 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Colors } from '@/constants/Colors';
+import { Colors, LindexColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { useUser } from '@/contexts/UserContext';
@@ -202,7 +202,7 @@ export default function DailyScreen() {
 
   const headerImage = (
     <LinearGradient
-      colors={['#000000', '#000000', '#000000']}
+      colors={[LindexColors.sand, LindexColors.sand, LindexColors.sand]}
       style={styles.headerGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -219,14 +219,14 @@ export default function DailyScreen() {
       />
       <View style={styles.headerContent}>
         <View style={styles.digitalTwinContainer}>
-          <Text style={styles.digitalTwinTitle}>Lindy</Text>
-          <Text style={styles.digitalTwinTitleSmall}>by Lindex</Text>
+          <Text style={[styles.digitalTwinTitle, { color: LindexColors.black }]}>Lindy</Text>
+          <Text style={[styles.digitalTwinTitleSmall, { color: LindexColors.red }]}>by Lindex</Text>
           <Animated.Image 
             source={currentTwin.image} 
             style={[styles.digitalTwinImage, { opacity: twinFadeAnim }]}
             resizeMode="contain"
           />
-          <Text style={styles.digitalTwinSubtitle}>Style Profile: Minimalist Chic</Text>
+          <Text style={[styles.digitalTwinSubtitle, { color: LindexColors.black }]}>Style Profile: Minimalist Chic</Text>
         </View>
       </View>
     </LinearGradient>
@@ -246,7 +246,7 @@ export default function DailyScreen() {
       </TouchableOpacity>
 
       <ParallaxScrollView
-        headerBackgroundColor={{ light: '#f8f9ff', dark: '#1a1a1a' }}
+        headerBackgroundColor={{ light: LindexColors.sand, dark: '#1a1a1a' }}
         headerImage={headerImage}
       >
       {/* Recommendations Section */}
@@ -254,7 +254,7 @@ export default function DailyScreen() {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Today's Recommendations</Text>
           <TouchableOpacity>
-            <Text style={[styles.seeAllText, { color: colors.tint }]}>See All</Text>
+            <Text style={[styles.seeAllText, { color: LindexColors.red }]}>See All</Text>
           </TouchableOpacity>
         </View>
         
@@ -267,9 +267,9 @@ export default function DailyScreen() {
                   <IconSymbol 
                     name={getRecommendationIcon(item.type)} 
                     size={16} 
-                    color={colors.tint} 
+                    color={LindexColors.red} 
                   />
-                  <Text style={[styles.recommendationType, { color: colors.tint }]}>
+                  <Text style={[styles.recommendationType, { color: LindexColors.red }]}>
                     {item.type.toUpperCase()}
                   </Text>
                 </View>
@@ -290,7 +290,7 @@ export default function DailyScreen() {
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Fashion News</Text>
           <TouchableOpacity>
-            <Text style={[styles.seeAllText, { color: colors.tint }]}>See All</Text>
+            <Text style={[styles.seeAllText, { color: LindexColors.red }]}>See All</Text>
           </TouchableOpacity>
         </View>
         
@@ -298,7 +298,7 @@ export default function DailyScreen() {
           <TouchableOpacity key={item.id} style={[styles.newsCard, { borderColor: colors.icon + '20' }]}>
             <View style={styles.newsContent}>
               <View style={styles.newsHeader}>
-                <Text style={[styles.newsCategory, { color: colors.tint }]}>{item.category}</Text>
+                <Text style={[styles.newsCategory, { color: LindexColors.red }]}>{item.category}</Text>
                 <Text style={[styles.newsTime, { color: colors.icon }]}>{item.time}</Text>
               </View>
               <Text style={[styles.newsTitle, { color: colors.text }]}>{item.title}</Text>
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   recommendationCard: {
     width: 200,
     marginRight: 16,
-    backgroundColor: '#fff',
+    backgroundColor: LindexColors.peach,
     borderRadius: 16,
     overflow: 'hidden',
     elevation: 2,

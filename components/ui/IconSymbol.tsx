@@ -26,6 +26,16 @@ const MAPPING = {
   'link': 'link',
   'lock.fill': 'lock',
   'info.circle.fill': 'info',
+  'sparkles': 'auto-awesome',
+  'sun.max.fill': 'wb-sunny',
+  'tshirt.fill': 'dry-cleaning',
+  'heart.fill': 'favorite',
+  'plus': 'add',
+  'tag.fill': 'local-offer',
+  'photo.fill': 'photo',
+  'stop.fill': 'stop',
+  'mic.fill': 'mic',
+  'person.2.fill': 'people',
 } as IconMapping;
 
 /**

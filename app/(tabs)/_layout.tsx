@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
-import { Colors } from '@/constants/Colors';
+import { Colors, LindexColors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
@@ -14,7 +14,8 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: LindexColors.red,
+        tabBarInactiveTintColor: Colors[colorScheme ?? 'light'].tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
@@ -22,8 +23,11 @@ export default function TabLayout() {
           ios: {
             // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
+            backgroundColor: Colors[colorScheme ?? 'light'].background,
           },
-          default: {},
+          default: {
+            backgroundColor: Colors[colorScheme ?? 'light'].background,
+          },
         }),
       }}>
       <Tabs.Screen
@@ -31,6 +35,10 @@ export default function TabLayout() {
         options={{
           title: 'Daily',
           tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="sun.max.fill" color={color} />,
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].headerBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].headerText,
         }}
       />
       <Tabs.Screen
@@ -38,6 +46,10 @@ export default function TabLayout() {
         options={{
           title: 'Wardrobe',
           tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="tshirt.fill" color={color} />,
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].headerBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].headerText,
         }}
       />
       <Tabs.Screen
@@ -45,13 +57,21 @@ export default function TabLayout() {
         options={{
           title: 'Rank Outfits',
           tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="heart.fill" color={color} />,
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].headerBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].headerText,
         }}
       />
       <Tabs.Screen
-        name="lindy-ai"
+        name="lindy-ai/index"
         options={{
           title: 'Lindy AI',
           tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="sparkles" color={color} />,
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].headerBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].headerText,
         }}
       />
       <Tabs.Screen
@@ -59,6 +79,10 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color }:any) => <IconSymbol size={28} name="person.fill" color={color} />,
+          headerStyle: {
+            backgroundColor: Colors[colorScheme ?? 'light'].headerBackground,
+          },
+          headerTintColor: Colors[colorScheme ?? 'light'].headerText,
         }}
       />
     </Tabs>
