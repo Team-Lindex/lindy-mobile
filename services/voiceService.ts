@@ -7,6 +7,8 @@ import { fetchApi, ApiResponse } from './api';
 export interface OutfitResponse {
   outfit: any;
   audioUrl: string;
+  success?: boolean;
+  message?: string;
 }
 
 /**
@@ -19,14 +21,31 @@ export async function sendOutfitRequest(
   userId: string,
   text: string
 ): Promise<ApiResponse<OutfitResponse>> {
+  console.log(`Sending outfit request for user ${userId} with text: ${text}`);
+  
   // Send the request as JSON
-  return fetchApi<OutfitResponse>('/voice/text-outfit', {
+  const response = await fetchApi<OutfitResponse>('/voice/text-outfit', {
     method: 'POST',
     body: JSON.stringify({
       userId,
       question: text
     }),
   });
+  
+  console.log('Outfit request response:', JSON.stringify(response));
+  
+  // Ensure the audioUrl is properly formatted
+  if (response.success && response.data && response.data.audioUrl) {
+    console.log('Original audio URL:', response.data.audioUrl);
+    
+    // If the audioUrl is a relative path, make sure it starts with a slash
+    if (!response.data.audioUrl.startsWith('http') && !response.data.audioUrl.startsWith('/')) {
+      response.data.audioUrl = '/' + response.data.audioUrl;
+      console.log('Fixed audio URL:', response.data.audioUrl);
+    }
+  }
+  
+  return response;
 }
 
 /**

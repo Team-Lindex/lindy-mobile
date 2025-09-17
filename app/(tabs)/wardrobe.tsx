@@ -14,6 +14,8 @@ import { useUser } from '@/contexts/UserContext';
 import { LazyImage } from '@/components/LazyImage';
 import { AddWardrobeItemModal } from '@/components/AddWardrobeItemModal';
 import { EditWardrobeItemModal } from '@/components/EditWardrobeItemModal';
+import { Colors, LindexColors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 // Will be populated dynamically from API data
 
@@ -21,6 +23,8 @@ import { EditWardrobeItemModal } from '@/components/EditWardrobeItemModal';
 
 export default function WardrobeScreen() {
   const { currentUser } = useUser();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [wardrobeItems, setWardrobeItems] = useState<WardrobeItem[]>([]);
   const [categories, setCategories] = useState<string[]>(['All']);
@@ -88,14 +92,14 @@ export default function WardrobeScreen() {
     : wardrobeItems.filter(item => item.type.trim() === selectedCategory);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Wardrobe</Text>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.header, { borderBottomColor: LindexColors.peach }]}>
+        <Text style={[styles.title, { color: colors.text }]}>Wardrobe</Text>
         <TouchableOpacity 
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: LindexColors.peach }]}
           onPress={() => setModalVisible(true)}
         >
-          <IconSymbol name="plus" size={24} color="#000" />
+          <IconSymbol name="plus" size={24} color={LindexColors.red} />
         </TouchableOpacity>
       </View>
 
@@ -105,13 +109,14 @@ export default function WardrobeScreen() {
             key={category}
             style={[
               styles.categoryButton,
-              selectedCategory === category && styles.selectedCategory,
+              selectedCategory === category && [styles.selectedCategory, { backgroundColor: LindexColors.red }],
             ]}
             onPress={() => setSelectedCategory(category)}
           >
             <Text
               style={[
                 styles.categoryText,
+                { color: colors.text },
                 selectedCategory === category && styles.selectedCategoryText,
               ]}
             >
@@ -132,9 +137,9 @@ export default function WardrobeScreen() {
           </View>
         ) : filteredItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <IconSymbol name="tshirt" size={50} color="#ccc" />
-            <Text style={styles.emptyText}>Your wardrobe seems to be empty</Text>
-            <Text style={styles.emptySubText}>Add some items to get started</Text>
+            <IconSymbol name="tshirt" size={50} color={LindexColors.peach} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>Your wardrobe seems to be empty</Text>
+            <Text style={[styles.emptySubText, { color: LindexColors.red }]}>Add some items to get started</Text>
           </View>
         ) : (
           <View style={styles.grid}>
@@ -153,7 +158,7 @@ export default function WardrobeScreen() {
                   spinnerSize="small"
                 />
                 {item.tags.length > 0 && (
-                  <View style={styles.tagIndicator}>
+                  <View style={[styles.tagIndicator, { backgroundColor: LindexColors.red + 'CC' }]}>
                     <Text style={styles.tagCount}>{item.tags.length}</Text>
                     <IconSymbol name="tag.fill" size={12} color="#fff" />
                   </View>
@@ -184,7 +189,6 @@ export default function WardrobeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -223,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   selectedCategory: {
-    backgroundColor: '#000',
+    backgroundColor: LindexColors.red,
   },
   categoryText: {
     fontSize: 16,
@@ -257,7 +261,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 10,
     right: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,

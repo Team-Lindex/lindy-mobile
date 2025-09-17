@@ -22,6 +22,8 @@ import { Audio } from 'expo-av';
 import { useUser } from '@/contexts/UserContext';
 import { sendOutfitRequest, getAudioResponse } from '@/services/voiceService';
 import Voice from '@react-native-voice/voice';
+import { Colors, LindexColors } from '@/constants/Colors';
+import { useColorScheme } from '@/hooks/useColorScheme';
 
 interface Message {
   id: number;
@@ -60,6 +62,8 @@ const initialMessages: Message[] = [
 
 export default function LindyAIScreen() {
   const { currentUser } = useUser();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [inputText, setInputText] = useState('');
@@ -300,10 +304,23 @@ export default function LindyAIScreen() {
           console.log('Audio URL received from API:', response.data.audioUrl);
           // Store the audio URL in a variable to use in the setTimeout callback
           const audioUrl = response.data.audioUrl;
-          // Small delay to ensure UI is updated before playing audio
-          setTimeout(() => {
+          
+          // Log the response data structure for debugging
+          console.log('Full API response data:', JSON.stringify(response.data));
+          
+          // Ensure we have a valid audio URL
+          if (audioUrl) {
+            // Small delay to ensure UI is updated before playing audio
+            setTimeout(() => {
+              console.log('Attempting to play audio after delay');
+              playAudio(audioUrl, messages.length + 2);
+            }, 1000); // Increased delay to 1 second for better reliability
+            
+            // Also try playing directly as a fallback
             playAudio(audioUrl, messages.length + 2);
-          }, 500);
+          } else {
+            console.error('Audio URL is empty or invalid');
+          }
         } else {
           console.log('No audio URL received from API');
         }
@@ -333,14 +350,35 @@ export default function LindyAIScreen() {
     }
   };
 
+  // Fallback audio URL for testing
+  const fallbackAudioUrl = 'https://www2.cs.uic.edu/~i101/SoundFiles/CantinaBand3.wav';
+  
   const playAudio = async (audioUrl: string, messageId: number) => {
     try {
-      console.log('Playing audio from URL:', audioUrl);
+      console.log('Starting audio playback process for URL:', audioUrl);
+      
+      // Validate the URL
+      if (!audioUrl || typeof audioUrl !== 'string') {
+        console.error('Invalid audio URL, using fallback:', audioUrl);
+        audioUrl = fallbackAudioUrl;
+      }
+      
+      // Add base URL if it's a relative path
+      const fullUrl = audioUrl.startsWith('http') 
+        ? audioUrl 
+        : `http://localhost:8080${audioUrl.startsWith('/') ? '' : '/'}${audioUrl}`;
+      
+      console.log('Full audio URL:', fullUrl);
       
       // Stop current sound if playing
       if (sound) {
-        await sound.stopAsync();
-        await sound.unloadAsync();
+        console.log('Stopping previous audio playback');
+        try {
+          await sound.stopAsync();
+          await sound.unloadAsync();
+        } catch (e) {
+          console.error('Error stopping previous sound:', e);
+        }
         setSound(null);
         setIsPlaying(false);
         
@@ -352,37 +390,58 @@ export default function LindyAIScreen() {
       }
 
       // Configure audio session for playback
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-        playThroughEarpieceAndroid: false,
-      });
+      console.log('Configuring audio session');
+      try {
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
+        });
+      } catch (e) {
+        console.error('Error setting audio mode:', e);
+      }
 
+      console.log('Creating audio object');
       // Load and play the new sound
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: true, volume: 1.0 }
+        { uri: fullUrl },
+        { shouldPlay: true, volume: 1.0 },
+        (status) => {
+          console.log('Audio loading status:', status);
+        }
       );
       
+      console.log('Audio object created successfully');
       setSound(newSound);
       setIsPlaying(true);
       setCurrentPlayingId(messageId);
-      console.log('Audio playback started');
 
       // Listen for playback status
       newSound.setOnPlaybackStatusUpdate((status) => {
-        if ('isLoaded' in status && status.isLoaded) {
-          if ('didJustFinish' in status && status.didJustFinish) {
-            console.log('Audio playback finished');
-            setIsPlaying(false);
-            setCurrentPlayingId(null);
-          } else if ('error' in status) {
-            console.error('Audio playback error:', status.error);
+        console.log('Audio status update:', status);
+        if ('isLoaded' in status) {
+          if (status.isLoaded) {
+            if ('didJustFinish' in status && status.didJustFinish) {
+              console.log('Audio playback finished');
+              setIsPlaying(false);
+              setCurrentPlayingId(null);
+            } else if ('isPlaying' in status) {
+              console.log('Is playing:', status.isPlaying);
+            }
+          } else {
+            console.log('Audio not loaded');
           }
         }
+        if ('error' in status && status.error) {
+          console.error('Audio playback error:', status.error);
+        }
       });
+      
+      // Ensure playback starts
+      await newSound.playAsync();
+      console.log('Audio playback started explicitly');
     } catch (error) {
       console.error('Error playing audio:', error);
       Alert.alert('Error', 'Failed to play audio response');
@@ -430,7 +489,7 @@ export default function LindyAIScreen() {
 
   return (
     <KeyboardAvoidingView 
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <SafeAreaView style={styles.safeAreaContainer}>
@@ -438,11 +497,11 @@ export default function LindyAIScreen() {
         <View style={styles.cardContainer}>
           {showConfirmation ? (
             // Confirmation state - show transcribed text and confirm/edit buttons
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Is this correct?</Text>
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
+              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>Is this correct?</Text>
               
               <TextInput
-                style={styles.transcriptionInput}
+                style={[styles.transcriptionInput, { backgroundColor: LindexColors.white }]}
                 value={transcribedText}
                 onChangeText={editTranscription}
                 multiline
@@ -458,7 +517,7 @@ export default function LindyAIScreen() {
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.confirmButton}
+                  style={[styles.confirmButton, { backgroundColor: LindexColors.red }]}
                   onPress={confirmTranscription}
                 >
                   <Text style={styles.confirmButtonText}>Send</Text>
@@ -467,8 +526,8 @@ export default function LindyAIScreen() {
             </View>
           ) : isListening || isProcessing ? (
             // Listening or processing state
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
+              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>
                 {isProcessing ? 'Processing...' : 'Listening...'}
               </Text>
               
@@ -479,33 +538,33 @@ export default function LindyAIScreen() {
               )}
               
               {isProcessing && (
-                <ActivityIndicator size="large" color="#e53e3e" />
+                <ActivityIndicator size="large" color={LindexColors.red} />
               )}
               
               {transcribedText ? (
-                <Text style={styles.transcribedText}>{transcribedText}</Text>
+                <Text style={[styles.transcribedText, { color: colors.text }]}>{transcribedText}</Text>
               ) : null}
             </View>
           ) : messages.length > 0 && messages[messages.length - 1].isUser ? (
             // User just sent a message, show processing or last message
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{messages[messages.length - 1].text}</Text>
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
+              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>{messages[messages.length - 1].text}</Text>
               <View style={styles.waveformContainer}>
                 {renderWaveform()}
               </View>
             </View>
           ) : outfits.length > 0 ? (
             // Show outfit recommendation
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
               <View style={styles.outfitNavigation}>
                 <TouchableOpacity 
                   style={styles.navArrow} 
                   onPress={() => navigateOutfit('prev')}
                 >
-                  <IconSymbol name="chevron.left" size={24} color="#000" />
+                  <IconSymbol name="chevron.left" size={24} color={colors.text} />
                 </TouchableOpacity>
                 
-                <View style={styles.outfitImageContainer}>
+                <View style={[styles.outfitImageContainer, { backgroundColor: LindexColors.white }]}>
                   <Image 
                     source={{ uri: outfits[currentOutfitIndex]?.imageUrl || 'https://via.placeholder.com/150' }}
                     style={styles.outfitImage}
@@ -517,18 +576,18 @@ export default function LindyAIScreen() {
                   style={styles.navArrow} 
                   onPress={() => navigateOutfit('next')}
                 >
-                  <IconSymbol name="chevron.right" size={24} color="#000" />
+                  <IconSymbol name="chevron.right" size={24} color={colors.text} />
                 </TouchableOpacity>
               </View>
               
-              <Text style={styles.outfitDescription}>
+              <Text style={[styles.outfitDescription, { color: colors.text }]}>
                 {outfits[currentOutfitIndex]?.description || 'Outfit recommendation'}
               </Text>
             </View>
           ) : (
             // Default state - greeting
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Good morning {currentUser?.name?.split(' ')[0] || 'there'}</Text>
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
+              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>Good morning {currentUser?.name?.split(' ')[0] || 'there'}</Text>
               <View style={styles.waveformContainer}>
                 {renderWaveform()}
               </View>
@@ -536,36 +595,36 @@ export default function LindyAIScreen() {
           )}
         </View>
 
-      <View style={[styles.bottomNavigation, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+      <View style={[styles.bottomNavigation, { paddingBottom: Math.max(insets.bottom, 16), borderTopColor: LindexColors.peach }]}>
         <TouchableOpacity style={styles.navButton}>
-          <View style={styles.navButtonInner}>
+          <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
             <Image
               source={require('@/assets/images/react-logo.png')}
               style={styles.navAvatar}
             />
           </View>
-          <Text style={styles.navLabel}>You</Text>
+          <Text style={[styles.navLabel, { color: colors.text }]}>You</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
           style={[styles.navButton, styles.mainNavButton]}
           onPress={isListening ? stopListening : startListening}
         >
-          <View style={[styles.navButtonInner, styles.mainNavButtonInner]}>
+          <View style={[styles.navButtonInner, styles.mainNavButtonInner, { backgroundColor: LindexColors.red }]}>
             <IconSymbol 
               name={isListening ? "stop.fill" : "mic.fill"} 
               size={24} 
-              color="#fff" 
+              color={LindexColors.white} 
             />
           </View>
-          <Text style={styles.navLabel}>Assistant</Text>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Assistant</Text>
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.navButton}>
-          <View style={styles.navButtonInner}>
-            <IconSymbol name="person.2.fill" size={20} color="#e53e3e" />
+          <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
+            <IconSymbol name="person.2.fill" size={20} color={LindexColors.red} />
           </View>
-          <Text style={styles.navLabel}>Circles</Text>
+          <Text style={[styles.navLabel, { color: colors.text }]}>Circles</Text>
         </TouchableOpacity>
       </View>
       </SafeAreaView>
@@ -576,7 +635,6 @@ export default function LindyAIScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   safeAreaContainer: {
     flex: 1,
@@ -590,7 +648,6 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '100%',
-    backgroundColor: '#FFF0F0', // Light pink background
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
@@ -605,7 +662,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#e53e3e', // Red text
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -619,7 +675,7 @@ const styles = StyleSheet.create({
   },
   waveformBar: {
     width: 4,
-    backgroundColor: '#e53e3e', // Red color
+    backgroundColor: LindexColors.red,
     marginHorizontal: 2,
     borderRadius: 2,
   },
@@ -648,7 +704,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   confirmButton: {
-    backgroundColor: '#e53e3e',
+    backgroundColor: LindexColors.red,
     borderRadius: 20,
     paddingVertical: 12,
     paddingHorizontal: 24,
@@ -721,7 +777,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 1.2 }],
   },
   mainNavButtonInner: {
-    backgroundColor: '#e53e3e', // Red background for mic button
+    backgroundColor: LindexColors.red,
   },
   navAvatar: {
     width: 30,
