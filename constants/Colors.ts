@@ -31,9 +31,9 @@ export const LindexColors = {
 // Theme configurations
 export const Colors = {
   light: {
-    // Basic theme (Sand background with Black text)
+    // Basic theme (Pink background with Black text)
     text: '#000000',
-    background: LindexColors.sand,
+    background: LindexColors.pink,
     tint: LindexColors.red,
     icon: '#000000',
     tabIconDefault: '#687076',

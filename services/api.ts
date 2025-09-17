@@ -2,8 +2,8 @@
  * Base API service for making HTTP requests
  */
 
-//const BASE_URL = 'https://lindy-api.martinsson.io/api';
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = 'https://lindy-api.martinsson.io/api';
+//const BASE_URL = 'http://localhost:8080/api';
 
 export interface ApiResponse<T> {
   success: boolean;

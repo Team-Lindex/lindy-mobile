@@ -1,29 +1,29 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import { YouIcon } from '@/components/YouIcon';
+import { Colors, LindexColors } from '@/constants/Colors';
+import { useUser } from '@/contexts/UserContext';
+import { useColorScheme } from '@/hooks/useColorScheme';
+import { Voice } from '@/services/hybridVoiceService';
+import { sendOutfitRequest } from '@/services/voiceService';
+import { Audio } from 'expo-av';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  SafeAreaView,
-  Image,
   ActivityIndicator,
-  Platform,
   Alert,
-  KeyboardAvoidingView,
-  Dimensions,
   Animated,
   Easing,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Audio } from 'expo-av';
-import { useUser } from '@/contexts/UserContext';
-import { sendOutfitRequest, getAudioResponse } from '@/services/voiceService';
-import Voice from '@react-native-voice/voice';
-import { Colors, LindexColors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
 
 interface Message {
   id: number;
@@ -35,27 +35,9 @@ interface Message {
 
 const initialMessages: Message[] = [
   {
-    id: 1,
-    text: "Hi there! I'm Lindy, your personal style assistant. How can I help you today?",
-    isUser: false,
-    timestamp: new Date(),
-  },
-  {
-    id: 2,
-    text: "I'm looking for a casual outfit for a weekend brunch with friends.",
-    isUser: true,
-    timestamp: new Date(),
-  },
-  {
-    id: 3,
-    text: "Sure! How about a pair of high-waisted jeans, a flowy blouse, and some cute sandals? I can show you some options from Lindex if you'd like.",
-    isUser: false,
-    timestamp: new Date(),
-  },
-  {
     id: 4,
-    text: "Yes, please! That sounds perfect.",
-    isUser: true,
+    text: "Good Morning, Eva!",
+    isUser: false,
     timestamp: new Date(),
   },
 ];
@@ -77,6 +59,7 @@ export default function LindyAIScreen() {
   const [currentPlayingId, setCurrentPlayingId] = useState<number | null>(null);
   const [currentOutfitIndex, setCurrentOutfitIndex] = useState(0);
   const [outfits, setOutfits] = useState<any[]>([]);
+  const [voiceAttempts, setVoiceAttempts] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   
   // Animation values for waveform
@@ -111,33 +94,59 @@ export default function LindyAIScreen() {
   // Initialize voice recognition and audio playback
   useEffect(() => {
     // Set up voice recognition event handlers
-    Voice.onSpeechStart = () => {
-      console.log('Speech recognition started');
-    };
-    
-    Voice.onSpeechRecognized = () => {
-      console.log('Speech recognized');
-    };
-    
-    Voice.onSpeechEnd = () => {
-      console.log('Speech recognition ended');
-      setIsListening(false);
-    };
-    
-    Voice.onSpeechError = (error) => {
-      console.error('Speech recognition error:', error);
-      setIsListening(false);
-      Alert.alert('Recognition Error', 'There was a problem recognizing your speech. Please try again.');
-    };
-    
-    Voice.onSpeechResults = (event) => {
-      if (event.value && event.value.length > 0) {
-        const recognizedText = event.value[0];
-        console.log('Speech recognition result:', recognizedText);
-        setTranscribedText(recognizedText);
-        setShowConfirmation(true);
+    Voice.setHandlers({
+      onSpeechStart: () => {
+        console.log('Speech recognition started - listening for speech...');
+      },
+      
+      onSpeechRecognized: () => {
+        console.log('Speech recognized');
+      },
+      
+      onSpeechEnd: () => {
+        console.log('Speech recognition ended');
+        setIsListening(false);
+      },
+      
+      onSpeechError: (error) => {
+        console.error('Speech recognition error:', error);
+        setIsListening(false);
+        
+        // Handle different error types with appropriate user messages
+        if (error.error === 'no-speech') {
+          console.log('No speech detected - attempt', voiceAttempts + 1);
+          setVoiceAttempts(prev => prev + 1);
+          
+          // Auto-retry up to 2 times for no-speech, then give user feedback
+          if (voiceAttempts < 2) {
+            console.log('Auto-retrying voice recognition...');
+            setTimeout(() => {
+              startListening();
+            }, 500);
+          } else {
+            console.log('Max voice attempts reached, stopping auto-retry');
+            setVoiceAttempts(0); // Reset for next time
+            // Don't show intrusive alert, just let user manually retry
+          }
+        } else if (error.error === 'not-allowed') {
+          Alert.alert('Permission Denied', 'Please allow microphone access to use voice recognition.');
+        } else if (error.error === 'network') {
+          Alert.alert('Network Error', 'Please check your internet connection and try again.');
+        } else {
+          Alert.alert('Recognition Error', 'There was a problem recognizing your speech. Please try again.');
+        }
+      },
+      
+      onSpeechResults: (event) => {
+        if (event.value && event.value.length > 0) {
+          const recognizedText = event.value[0];
+          console.log('Speech recognition result:', recognizedText);
+          setTranscribedText(recognizedText);
+          setShowConfirmation(true);
+          setVoiceAttempts(0); // Reset attempts on successful recognition
+        }
       }
-    };
+    });
     
     // Request microphone permissions
     (async () => {
@@ -185,8 +194,20 @@ export default function LindyAIScreen() {
     }, 100);
   }, [messages]);
 
+  // Log inputText changes
+  useEffect(() => {
+    console.log('inputText state changed to:', inputText);
+  }, [inputText]);
+
+  // Log transcribedText changes
+  useEffect(() => {
+    console.log('transcribedText state changed to:', transcribedText);
+  }, [transcribedText]);
+
   const sendMessage = () => {
+    console.log('sendMessage called with inputText:', inputText);
     if (inputText.trim()) {
+      console.log('Sending message:', inputText.trim());
       const newMessage: Message = {
         id: messages.length + 1,
         text: inputText,
@@ -195,15 +216,25 @@ export default function LindyAIScreen() {
       };
       setMessages([...messages, newMessage]);
       setInputText('');
+      console.log('Message sent and inputText cleared');
+    } else {
+      console.log('inputText is empty, not sending message');
     }
   };
 
   // Start real voice recognition
   const startListening = async () => {
     try {
-      // Reset transcribed text
+      // Check if voice recognition is available
+      if (!Voice.isAvailable()) {
+        Alert.alert('Not Supported', 'Voice recognition is not available on this platform');
+        return;
+      }
+
+      // Reset transcribed text and voice attempts
       setTranscribedText('');
       setShowConfirmation(false);
+      setVoiceAttempts(0); // Reset attempts when manually starting
       
       // Start listening
       await Voice.start('en-US');
@@ -232,7 +263,9 @@ export default function LindyAIScreen() {
   
   // Edit transcribed text
   const editTranscription = (newText: string) => {
+    console.log('editTranscription called with newText:', newText);
     setTranscribedText(newText);
+    console.log('transcribedText updated to:', newText);
   };
   
   // Cancel transcription
@@ -243,8 +276,15 @@ export default function LindyAIScreen() {
 
   // Process transcribed text and send to API
   const processTranscribedText = async (text: string) => {
-    if (!text || !currentUser) return;
+    console.log('processTranscribedText called with text:', text);
+    console.log('currentUser:', currentUser);
     
+    if (!text || !currentUser) {
+      console.log('Missing text or currentUser, returning early');
+      return;
+    }
+    
+    console.log('Starting to process transcribed text');
     setIsProcessing(true);
     
     try {
@@ -587,7 +627,7 @@ export default function LindyAIScreen() {
           ) : (
             // Default state - greeting
             <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
-              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>Good morning {currentUser?.name?.split(' ')[0] || 'there'}</Text>
+              <Text style={[styles.cardTitle, { color: '#9F0000' }]}>Good morning {currentUser?.name?.split(' ')[0]}!</Text>
               <View style={styles.waveformContainer}>
                 {renderWaveform()}
               </View>
@@ -598,10 +638,7 @@ export default function LindyAIScreen() {
       <View style={[styles.bottomNavigation, { paddingBottom: Math.max(insets.bottom, 16), borderTopColor: LindexColors.peach }]}>
         <TouchableOpacity style={styles.navButton}>
           <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
-            <Image
-              source={require('@/assets/images/react-logo.png')}
-              style={styles.navAvatar}
-            />
+            <YouIcon width={60} height={60} />
           </View>
           <Text style={[styles.navLabel, { color: colors.text }]}>You</Text>
         </TouchableOpacity>
@@ -613,7 +650,7 @@ export default function LindyAIScreen() {
           <View style={[styles.navButtonInner, styles.mainNavButtonInner, { backgroundColor: LindexColors.red }]}>
             <IconSymbol 
               name={isListening ? "stop.fill" : "mic.fill"} 
-              size={24} 
+              size={34} 
               color={LindexColors.white} 
             />
           </View>
@@ -622,7 +659,12 @@ export default function LindyAIScreen() {
         
         <TouchableOpacity style={styles.navButton}>
           <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
-            <IconSymbol name="person.2.fill" size={20} color={LindexColors.red} />
+            <svg width="60" height="60" viewBox="0 0 49 49" fill="none">
+              <path d="M24.5 49C38.031 49 49 38.031 49 24.5C49 10.969 38.031 0 24.5 0C10.969 0 0 10.969 0 24.5C0 38.031 10.969 49 24.5 49Z" fill="#9F0000"/>
+              <path opacity="0.65" d="M16.4235 23.3144C20.2236 27.1145 26.3848 27.1145 30.1849 23.3144C33.985 19.5143 33.985 13.3532 30.1849 9.55306C26.3848 5.75295 20.2236 5.75295 16.4235 9.55306C12.6234 13.3532 12.6234 19.5143 16.4235 23.3144Z" fill="#F0A8B0"/>
+              <path opacity="0.65" d="M25.9967 32.8877C29.7969 36.6878 35.958 36.6878 39.7581 32.8877C43.5582 29.0876 43.5582 22.9264 39.7581 19.1263C35.958 15.3262 29.7969 15.3262 25.9967 19.1263C22.1966 22.9264 22.1966 29.0876 25.9967 32.8877Z" fill="#F0A8B0"/>
+              <path opacity="0.65" d="M11.8805 36.6421C15.6806 40.4422 21.8418 40.4422 25.6419 36.6421C29.442 32.842 29.442 26.6808 25.6419 22.8807C21.8418 19.0806 15.6806 19.0806 11.8805 22.8807C8.08044 26.6808 8.08044 32.842 11.8805 36.6421Z" fill="#F0A8B0"/>
+            </svg>
           </View>
           <Text style={[styles.navLabel, { color: colors.text }]}>Circles</Text>
         </TouchableOpacity>
@@ -647,31 +689,38 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   card: {
-    width: '100%',
-    borderRadius: 20,
-    padding: 24,
+    width: '90%',
+    borderRadius: 24,
+    padding: 32,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-    minHeight: 200,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+    minHeight: 280,
+    maxWidth: 400,
   },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    width: 226,
+    height: 86,
+    fontFamily: 'Lindex Sans',
+    fontWeight: '400',
+    fontSize: 38,
+    lineHeight: 36,
+    letterSpacing: 0,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 8,
   },
   waveformContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     height: 60,
-    width: '80%',
-    marginVertical: 20,
+    width: '70%',
+    marginTop: 32,
+    marginBottom: 24,
   },
   waveformBar: {
     width: 4,
@@ -765,8 +814,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navButtonInner: {
-    width: 50,
-    height: 50,
+    width: 70,
+    height: 70,
     borderRadius: 25,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
