@@ -7,8 +7,10 @@
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
-    "lint": "expo lint"
+    "web": "node ./scripts/apply-voice-web-patch.js && expo start --web",
+    "apply-patches": "node ./scripts/apply-voice-web-patch.js",
+    "lint": "expo lint",
+    "docs": "node ./scripts/serve-docs.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

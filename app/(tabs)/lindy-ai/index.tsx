@@ -110,6 +110,9 @@ export default function LindyAIScreen() {
 
   // Initialize voice recognition and audio playback
   useEffect(() => {
+    console.log('Initializing voice recognition and audio playback...');
+    console.log('Platform:', Platform.OS);
+    
     // Set up voice recognition event handlers
     Voice.onSpeechStart = () => {
       console.log('Speech recognition started');
@@ -127,45 +130,85 @@ export default function LindyAIScreen() {
     Voice.onSpeechError = (error) => {
       console.error('Speech recognition error:', error);
       setIsListening(false);
-      Alert.alert('Recognition Error', 'There was a problem recognizing your speech. Please try again.');
+      
+      // Format a user-friendly error message
+      let errorMessage = 'There was a problem recognizing your speech. Please try again.';
+      if (typeof error === 'string') {
+        errorMessage += ' Error: ' + error;
+      } else if (error && typeof error === 'object' && 'message' in error) {
+        errorMessage += ' Error: ' + (error as any).message;
+      }
+      
+      Alert.alert('Recognition Error', errorMessage);
     };
     
     Voice.onSpeechResults = (event) => {
+      console.log('Speech recognition results received:', event);
       if (event.value && event.value.length > 0) {
         const recognizedText = event.value[0];
-        console.log('Speech recognition result:', recognizedText);
+        console.log('Using speech recognition result:', recognizedText);
         setTranscribedText(recognizedText);
         setShowConfirmation(true);
+      } else {
+        console.warn('Received empty speech recognition results');
       }
     };
     
-    // Request microphone permissions
+    // Request microphone permissions for native platforms
     (async () => {
       if (Platform.OS !== 'web') {
         try {
+          console.log('Requesting microphone permissions for native platform...');
           const { status } = await Audio.requestPermissionsAsync();
+          console.log('Microphone permission status:', status);
           if (status !== 'granted') {
             Alert.alert('Permission Denied', 'Please grant microphone permissions to use voice features');
           }
         } catch (error) {
           console.error('Error requesting microphone permission:', error);
         }
+      } else {
+        // For web, we'll request permissions when the user clicks the mic button
+        console.log('Web platform detected. Will request microphone permissions when needed.');
+        
+        // Check if speech recognition is available in this browser
+        const hasSpeechRecognition = !!(window as any).SpeechRecognition;
+        const hasWebkitSpeechRecognition = !!(window as any).webkitSpeechRecognition;
+        
+        console.log('Browser speech recognition support:', { 
+          standard: hasSpeechRecognition, 
+          webkit: hasWebkitSpeechRecognition 
+        });
+        
+        if (!hasSpeechRecognition && !hasWebkitSpeechRecognition) {
+          console.warn('Speech recognition is not supported in this browser');
+          Alert.alert(
+            'Browser Not Supported', 
+            'Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari for the best experience.'
+          );
+        }
       }
     })();
     
     // Configure audio for playback
-    Audio.setAudioModeAsync({
+    const audioConfig = Platform.OS !== 'web' ? {
       allowsRecordingIOS: true,
       playsInSilentModeIOS: true,
       staysActiveInBackground: true,
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
-    }).catch(error => {
-      console.error('Error setting audio mode:', error);
-    });
+    } : {};
+    
+    if (Object.keys(audioConfig).length > 0) {
+      console.log('Configuring audio mode for native platform...');
+      Audio.setAudioModeAsync(audioConfig).catch(error => {
+        console.error('Error setting audio mode:', error);
+      });
+    }
     
     // Clean up on unmount
     return () => {
+      console.log('Cleaning up voice recognition and audio resources...');
       Voice.destroy().then(() => {
         console.log('Voice instance destroyed');
       }).catch(e => {
@@ -173,7 +216,10 @@ export default function LindyAIScreen() {
       });
       
       if (sound) {
-        sound.unloadAsync();
+        console.log('Unloading sound...');
+        sound.unloadAsync().catch(e => {
+          console.warn('Error unloading sound:', e);
+        });
       }
     };
   }, []);
@@ -198,29 +244,89 @@ export default function LindyAIScreen() {
     }
   };
 
-  // Start real voice recognition
+  // Start voice recognition
   const startListening = async () => {
     try {
+      console.log('Starting voice recognition...');
+      
       // Reset transcribed text
       setTranscribedText('');
       setShowConfirmation(false);
       
+      // Check if we're on web and need to request permission first
+      if (Platform.OS === 'web') {
+        console.log('Web platform detected, requesting microphone permission...');
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: true,
+            video: false
+          });
+          console.log('Microphone permission granted:', stream);
+          
+          // Test the microphone by creating an audio context
+          try {
+            const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext;
+            if (AudioContext) {
+              const audioContext = new AudioContext();
+              const source = audioContext.createMediaStreamSource(stream);
+              console.log('Audio source created successfully:', source);
+              
+              // We don't need to connect it to anything, just testing if it works
+              // Clean up
+              setTimeout(() => {
+                try {
+                  audioContext.close();
+                } catch (e) {
+                  console.warn('Error closing audio context:', e);
+                }
+              }, 500);
+            }
+          } catch (audioError) {
+            console.warn('Audio context test failed:', audioError);
+          }
+        } catch (error) {
+          console.error('Error requesting microphone permission on web:', error);
+          Alert.alert(
+            'Permission Denied', 
+            'Please grant microphone permissions to use voice features. ' +
+            'You may need to check your browser settings to allow microphone access.'
+          );
+          return;
+        }
+      }
+      
       // Start listening
+      console.log('Calling Voice.start("en-US")');
       await Voice.start('en-US');
+      console.log('Voice.start completed successfully');
       setIsListening(true);
     } catch (error) {
       console.error('Error starting voice recognition:', error);
-      Alert.alert('Error', 'Failed to start voice recognition');
+      
+      if (Platform.OS === 'web') {
+        Alert.alert(
+          'Browser Support Issue', 
+          'Speech recognition may not be supported in this browser or requires permission. ' +
+          'Try using Chrome, Edge, or Safari for best compatibility. ' +
+          'Error: ' + (error instanceof Error ? error.message : String(error))
+        );
+      } else {
+        Alert.alert('Error', 'Failed to start voice recognition');
+      }
     }
   };
 
   // Stop voice recognition
   const stopListening = async () => {
+    console.log('Stopping voice recognition...');
     try {
       await Voice.stop();
+      console.log('Voice recognition stopped successfully');
       setIsListening(false);
     } catch (error) {
       console.error('Error stopping voice recognition:', error);
+      // Force the UI to show not listening even if there was an error
+      setIsListening(false);
     }
   };
   
@@ -389,24 +495,93 @@ export default function LindyAIScreen() {
         }
       }
 
-      // Configure audio session for playback
-      console.log('Configuring audio session');
-      try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: false,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        });
-      } catch (e) {
-        console.error('Error setting audio mode:', e);
+      // Configure audio session for playback (only for native platforms)
+      if (Platform.OS !== 'web') {
+        console.log('Configuring audio session');
+        try {
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: false,
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: true,
+            shouldDuckAndroid: true,
+            playThroughEarpieceAndroid: false,
+          });
+        } catch (e) {
+          console.error('Error setting audio mode:', e);
+        }
       }
 
       console.log('Creating audio object');
+      
+      // For web platform, use a simpler approach if needed
+      if (Platform.OS === 'web') {
+        try {
+          // Create HTML audio element directly for better web compatibility
+          // Use the HTMLAudioElement constructor instead of the Audio class from expo-av
+          const webAudio = new (window as any).Audio(fullUrl) as HTMLAudioElement;
+          webAudio.volume = 1.0;
+          
+          // Set up event listeners
+          webAudio.onplay = () => {
+            console.log('Web audio started playing');
+            setIsPlaying(true);
+            setCurrentPlayingId(messageId);
+          };
+          
+          webAudio.onended = () => {
+            console.log('Web audio playback finished');
+            setIsPlaying(false);
+            setCurrentPlayingId(null);
+          };
+          
+          // The onerror event can be either a string or an Event object
+          webAudio.onerror = (event: Event | string) => {
+            console.error('Web audio playback error:', event);
+            setIsPlaying(false);
+            setCurrentPlayingId(null);
+            Alert.alert('Error', 'Failed to play audio response');
+          };
+          
+          // Start playback
+          webAudio.play().catch((e: Error) => {
+            console.error('Error playing web audio:', e);
+            Alert.alert('Error', 'Failed to play audio. This may be due to browser autoplay restrictions.');
+          });
+          
+          // Store a reference to the audio element
+          const dummySound = {
+            async stopAsync() { webAudio.pause(); },
+            async unloadAsync() { /* nothing to do */ },
+            setOnPlaybackStatusUpdate() { /* nothing to do */ },
+            async playAsync() { return webAudio.play(); }
+          };
+          
+          setSound(dummySound as any);
+          
+        } catch (webError) {
+          console.error('Error with web audio playback:', webError);
+          // Fall back to Expo Audio as a backup
+          await playWithExpoAudio(fullUrl, messageId);
+        }
+      } else {
+        // Use Expo Audio for native platforms
+        await playWithExpoAudio(fullUrl, messageId);
+      }
+      
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      Alert.alert('Error', 'Failed to play audio response');
+      setIsPlaying(false);
+      setCurrentPlayingId(null);
+    }
+  };
+  
+  // Helper function to play audio using Expo Audio
+  const playWithExpoAudio = async (url: string, messageId: number) => {
+    try {
       // Load and play the new sound
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: fullUrl },
+        { uri: url },
         { shouldPlay: true, volume: 1.0 },
         (status) => {
           console.log('Audio loading status:', status);
@@ -443,10 +618,8 @@ export default function LindyAIScreen() {
       await newSound.playAsync();
       console.log('Audio playback started explicitly');
     } catch (error) {
-      console.error('Error playing audio:', error);
-      Alert.alert('Error', 'Failed to play audio response');
-      setIsPlaying(false);
-      setCurrentPlayingId(null);
+      console.error('Error in playWithExpoAudio:', error);
+      throw error; // Let the parent function handle this error
     }
   };
 

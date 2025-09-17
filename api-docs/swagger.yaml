@@ -1,0 +1,485 @@
+openapi: 3.0.0
+info:
+  title: Lindy AI API
+  description: API documentation for Lindy AI
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api
+    description: Local development server
+  - url: https://lindy-api.martinsson.io/api
+    description: Production server
+tags:
+  - name: Voice
+    description: Voice API endpoints
+  - name: Wardrobe
+    description: Wardrobe API endpoints
+  - name: Conversations
+    description: Conversation API endpoints
+paths:
+  /voice/text-outfit:
+    post:
+      tags:
+        - Voice
+      summary: Get outfit recommendation from text
+      description: Send transcribed text to get outfit recommendation and audio response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - question
+              properties:
+                userId:
+                  type: string
+                  description: The user's ID
+                question:
+                  type: string
+                  description: The transcribed text from voice input
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      outfit:
+                        type: object
+                        description: Outfit recommendation data
+                      audioUrl:
+                        type: string
+                        description: URL to the audio response
+                      success:
+                        type: boolean
+                      message:
+                        type: string
+  /text-to-speech:
+    post:
+      tags:
+        - Voice
+      summary: Convert text to speech
+      description: Get audio response for a text
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - userId
+                - text
+              properties:
+                userId:
+                  type: string
+                  description: The user's ID
+                text:
+                  type: string
+                  description: The text to convert to speech
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      audioUrl:
+                        type: string
+                        description: URL to the audio file
+  /wardrobe/user/{userId}:
+    get:
+      tags:
+        - Wardrobe
+      summary: Get user's wardrobe items
+      description: Fetches all wardrobe items for a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WardrobeItem'
+    post:
+      tags:
+        - Wardrobe
+      summary: Add wardrobe item
+      description: Adds a new wardrobe item for a user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewWardrobeItem'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/WardrobeItem'
+  /wardrobe/{itemId}:
+    put:
+      tags:
+        - Wardrobe
+      summary: Update wardrobe item
+      description: Updates a specific wardrobe item
+      parameters:
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the wardrobe item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tags:
+                  type: array
+                  items:
+                    type: string
+                  description: The new tags for the item
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/WardrobeItem'
+  
+  # Conversation Endpoints
+  /conversations:
+    post:
+      tags:
+        - Conversations
+      summary: Create a new conversation
+      description: Creates a new conversation for a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewConversation'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+  
+  /conversations/user/{userId}:
+    get:
+      tags:
+        - Conversations
+      summary: Get user's conversations
+      description: Fetches all conversations for a specific user
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+  
+  /conversations/{conversationId}:
+    get:
+      tags:
+        - Conversations
+      summary: Get a specific conversation
+      description: Fetches a specific conversation by ID
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the conversation
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+    
+    put:
+      tags:
+        - Conversations
+      summary: Update a conversation
+      description: Updates an existing conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConversation'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+    
+    delete:
+      tags:
+        - Conversations
+      summary: Delete a conversation
+      description: Deletes a specific conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the conversation
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      deleted:
+                        type: boolean
+  
+  /conversations/{conversationId}/messages:
+    post:
+      tags:
+        - Conversations
+      summary: Add a message to a conversation
+      description: Adds a new message to an existing conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatMessage'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Conversation'
+
+components:
+  schemas:
+    WardrobeItem:
+      type: object
+      properties:
+        _id:
+          type: string
+        userId:
+          type: string
+        imageUrl:
+          type: string
+        type:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        __v:
+          type: integer
+    
+    NewWardrobeItem:
+      type: object
+      required:
+        - userId
+        - imageUrl
+        - type
+      properties:
+        userId:
+          type: string
+        imageUrl:
+          type: string
+        type:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+    
+    ChatMessage:
+      type: object
+      required:
+        - role
+        - content
+        - timestamp
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: The role of the message sender
+        content:
+          type: string
+          description: The message content
+        timestamp:
+          type: string
+          format: date-time
+          description: The timestamp when the message was sent
+    
+    Conversation:
+      type: object
+      properties:
+        _id:
+          type: string
+          description: Unique identifier for the conversation
+        userId:
+          type: string
+          description: The ID of the user who owns the conversation
+        name:
+          type: string
+          description: The name of the conversation
+        chatHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: The history of messages in the conversation
+        createdAt:
+          type: string
+          format: date-time
+          description: When the conversation was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: When the conversation was last updated
+    
+    NewConversation:
+      type: object
+      required:
+        - userId
+        - name
+      properties:
+        userId:
+          type: string
+          description: The ID of the user who owns the conversation
+        name:
+          type: string
+          description: The name of the conversation
+        chatHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: Initial messages in the conversation
+    
+    UpdateConversation:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The updated name of the conversation
+        chatHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+          description: The updated chat history

@@ -35,6 +35,53 @@ npm run reset-project
 
 This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
 
+## API Documentation
+
+This project includes Swagger documentation for the API endpoints. To view the API documentation:
+
+```bash
+npm run docs
+```
+
+This will start a local server at http://localhost:3030 where you can view and interact with the API documentation.
+
+## Speech-to-Text Functionality
+
+The app includes speech-to-text functionality that works across platforms:
+
+- **iOS/Android**: Uses `@react-native-voice/voice` for native speech recognition
+- **Web**: Uses the Web Speech API for browser-based speech recognition
+
+### Web Browser Support
+
+The Web Speech API is supported in most modern browsers:
+
+- Chrome (desktop & Android)
+- Edge
+- Safari (desktop & iOS)
+- Firefox (with limitations)
+
+Notes:
+- Users will need to grant microphone permissions when first using the feature
+- Some browsers may require HTTPS for microphone access
+- Speech recognition quality varies by browser and language
+
+### Patching for Web Support
+
+To enable speech recognition on web platforms, this project includes a patching system for the `@react-native-voice/voice` package. The patch is automatically applied when running the web version:
+
+```bash
+npm run web
+```
+
+If you need to apply the patch manually (for example, after reinstalling node modules), you can run:
+
+```bash
+npm run apply-patches
+```
+
+The patch creates a web-specific implementation that uses the browser's Web Speech API instead of the native implementation.
+
 ## Learn more
 
 To learn more about developing your project with Expo, look at the following resources:
