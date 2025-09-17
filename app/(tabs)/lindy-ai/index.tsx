@@ -1,5 +1,4 @@
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { YouIcon } from '@/components/YouIcon';
 import { Colors, LindexColors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -746,8 +745,14 @@ export default function LindyAIScreen() {
 
       <View style={[styles.bottomNavigation, { paddingBottom: Math.max(insets.bottom, 16), borderTopColor: LindexColors.peach }]}>
         <TouchableOpacity style={styles.navButton}>
-          <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
-            <YouIcon width={60} height={60} />
+            <View style={[styles.navButtonInner, { backgroundColor: LindexColors.sand }]}>
+          {/* SVG for "You" button, copied from assets/images/circle_design.svg */}
+          <svg width="60" height="60" viewBox="0 0 49 49" fill="none">
+            <path d="M24.5 49C38.031 49 49 38.031 49 24.5C49 10.969 38.031 0 24.5 0C10.969 0 0 10.969 0 24.5C0 38.031 10.969 49 24.5 49Z" fill="#9F0000"/>
+            <path opacity="0.65" d="M16.4235 23.3144C20.2236 27.1145 26.3848 27.1145 30.1849 23.3144C33.985 19.5143 33.985 13.3532 30.1849 9.55306C26.3848 5.75295 20.2236 5.75295 16.4235 9.55306C12.6234 13.3532 12.6234 19.5143 16.4235 23.3144Z" fill="#F0A8B0"/>
+            <path opacity="0.65" d="M25.9967 32.8877C29.7969 36.6878 35.958 36.6878 39.7581 32.8877C43.5582 29.0876 43.5582 22.9264 39.7581 19.1263C35.958 15.3262 29.7969 15.3262 25.9967 19.1263C22.1966 22.9264 22.1966 29.0876 25.9967 32.8877Z" fill="#F0A8B0"/>
+            <path opacity="0.65" d="M11.8805 36.6421C15.6806 40.4422 21.8418 40.4422 25.6419 36.6421C29.442 32.842 29.442 26.6808 25.6419 22.8807C21.8418 19.0806 15.6806 19.0806 11.8805 22.8807C8.08044 26.6808 8.08044 32.842 11.8805 36.6421Z" fill="#F0A8B0"/>
+          </svg>
           </View>
           <Text style={[styles.navLabel, { color: colors.text }]}>You</Text>
         </TouchableOpacity>
