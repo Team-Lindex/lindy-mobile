@@ -13,6 +13,14 @@ export interface ApiResponse<T> {
   fromCache?: boolean;
 }
 
+export interface MockImageData {
+  imageUrl: string;
+}
+
+export async function fetchMockImages(): Promise<ApiResponse<MockImageData[]>> {
+  return fetchApi<MockImageData[]>('/voice/mock');
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options: RequestInit = {}

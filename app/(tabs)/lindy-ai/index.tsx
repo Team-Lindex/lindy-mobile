@@ -3,6 +3,7 @@ import { YouIcon } from '@/components/YouIcon';
 import { Colors, LindexColors } from '@/constants/Colors';
 import { useUser } from '@/contexts/UserContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { fetchMockImages } from '@/services/api';
 import { Voice } from '@/services/hybridVoiceService';
 import { sendOutfitRequest } from '@/services/voiceService';
 import { Audio } from 'expo-av';
@@ -11,6 +12,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Dimensions,
   Easing,
   Image,
   KeyboardAvoidingView,
@@ -24,6 +26,13 @@ import {
   View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+// Carousel constants (module-level so styles can use them)
+const SCREEN_WIDTH_CONST = Dimensions.get('window').width;
+const CARD_WIDTH_CONST = Math.min(260, SCREEN_WIDTH_CONST * 0.65);
+const CARD_HEIGHT_CONST = CARD_WIDTH_CONST * 1.4;
+const CARD_OVERLAP_CONST = -40; // negative to overlap
+const SNAP_INTERVAL_CONST = CARD_WIDTH_CONST + CARD_OVERLAP_CONST; // used for snapping and index calc
 
 interface Message {
   id: number;
@@ -61,6 +70,14 @@ export default function LindyAIScreen() {
   const [outfits, setOutfits] = useState<any[]>([]);
   const [voiceAttempts, setVoiceAttempts] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Carousel constants (instance-level references to module constants)
+  const SCREEN_WIDTH = SCREEN_WIDTH_CONST;
+  const CARD_WIDTH = CARD_WIDTH_CONST;
+  const CARD_HEIGHT = CARD_HEIGHT_CONST;
+  const CARD_OVERLAP = CARD_OVERLAP_CONST;
+  const SNAP_INTERVAL = SNAP_INTERVAL_CONST;
+  const carouselX = useRef(new Animated.Value(0)).current;
   
   // Animation values for waveform
   const waveformAnim = useRef(new Animated.Value(0)).current;
@@ -256,9 +273,65 @@ export default function LindyAIScreen() {
   };
   
   // Confirm transcribed text and send to processing
-  const confirmTranscription = () => {
+  const confirmTranscription = async () => {
     setShowConfirmation(false);
-    processTranscribedText(transcribedText);
+    setIsProcessing(true);
+    
+    try {
+      // Add user message with transcribed text
+      const userMessage: Message = {
+        id: messages.length + 1,
+        text: transcribedText,
+        isUser: true,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, userMessage]);
+
+      // Fetch mock images from API
+      const response = await fetchMockImages();
+      
+      if (response.success && response.data) {
+        // Transform API data to outfit format
+        const outfitItems = response.data.map((item, index) => ({
+          imageUrl: item.imageUrl,
+          description: `Outfit recommendation ${index + 1}`
+        }));
+        
+        setOutfits(outfitItems);
+        setCurrentOutfitIndex(0);
+        
+        // Add AI response
+        const aiMessage: Message = {
+          id: messages.length + 2,
+          text: "Here are some outfit recommendations for you!",
+          isUser: false,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Handle error
+        const errorMessage: Message = {
+          id: messages.length + 2,
+          text: "Sorry, I couldn't fetch outfit recommendations. Please try again.",
+          isUser: false,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+      }
+    } catch (error) {
+      console.error('Error fetching mock images:', error);
+      
+      // Add error message
+      const errorMessage: Message = {
+        id: messages.length + 2,
+        text: 'Sorry, there was an error fetching recommendations. Please try again.',
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsProcessing(false);
+    }
   };
   
   // Edit transcribed text
@@ -533,12 +606,19 @@ export default function LindyAIScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <SafeAreaView style={styles.safeAreaContainer}>
+        {/* Header with menu bar */}
+        <View style={styles.header}>
+            <TouchableOpacity style={styles.menuButton}>
+              <View style={[styles.hamburgerLine, styles.hamburgerLineLong]} />
+              <View style={[styles.hamburgerLine, styles.hamburgerLineShort]} />
+            </TouchableOpacity>
+        </View>
 
         <View style={styles.cardContainer}>
           {showConfirmation ? (
             // Confirmation state - show transcribed text and confirm/edit buttons
             <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
-              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>Is this correct?</Text>
+              <Text style={[styles.cardTitle, { color: '#9F0000' }]}>Is this correct?</Text>
               
               <TextInput
                 style={[styles.transcriptionInput, { backgroundColor: LindexColors.white }]}
@@ -567,7 +647,7 @@ export default function LindyAIScreen() {
           ) : isListening || isProcessing ? (
             // Listening or processing state
             <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
-              <Text style={[styles.cardTitle, { color: LindexColors.red }]}>
+              <Text style={[styles.cardTitle, { color: '#9F0000' }]}>
                 {isProcessing ? 'Processing...' : 'Listening...'}
               </Text>
               
@@ -594,35 +674,64 @@ export default function LindyAIScreen() {
               </View>
             </View>
           ) : outfits.length > 0 ? (
-            // Show outfit recommendation
-            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}>
-              <View style={styles.outfitNavigation}>
-                <TouchableOpacity 
-                  style={styles.navArrow} 
-                  onPress={() => navigateOutfit('prev')}
-                >
-                  <IconSymbol name="chevron.left" size={24} color={colors.text} />
-                </TouchableOpacity>
-                
-                <View style={[styles.outfitImageContainer, { backgroundColor: LindexColors.white }]}>
-                  <Image 
-                    source={{ uri: outfits[currentOutfitIndex]?.imageUrl || 'https://via.placeholder.com/150' }}
-                    style={styles.outfitImage}
-                    resizeMode="contain"
+            // Show outfit recommendation - overlapping swipeable carousel
+            <View style={[styles.card, { backgroundColor: LindexColors.peach }]}> 
+              <Animated.ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                snapToInterval={SNAP_INTERVAL}
+                decelerationRate="fast"
+                bounces={false}
+                contentContainerStyle={styles.carouselContent}
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: carouselX } } }],
+                  { useNativeDriver: false }
+                )}
+                onMomentumScrollEnd={(e) => {
+                  const index = Math.round(e.nativeEvent.contentOffset.x / SNAP_INTERVAL);
+                  setCurrentOutfitIndex(Math.max(0, Math.min(index, outfits.length - 1)));
+                }}
+                scrollEventThrottle={16}
+              >
+                {outfits.map((item, i) => {
+                  const inputRange = [
+                    (i - 1) * SNAP_INTERVAL,
+                    i * SNAP_INTERVAL,
+                    (i + 1) * SNAP_INTERVAL,
+                  ];
+                  const scale = carouselX.interpolate({
+                    inputRange,
+                    outputRange: [0.9, 1, 0.9],
+                    extrapolate: 'clamp',
+                  });
+                  const elevation = carouselX.interpolate({
+                    inputRange,
+                    outputRange: [1, 6, 1],
+                    extrapolate: 'clamp',
+                  });
+                  return (
+                    <Animated.View key={i} style={[styles.carouselCardWrapper, { zIndex: i === currentOutfitIndex ? 2 : 1, elevation }]}>
+                      <Animated.View style={[styles.carouselCard, { transform: [{ scale }] }]}> 
+                        <Image
+                          source={{ uri: item.imageUrl || 'https://via.placeholder.com/300' }}
+                          style={{ width: '100%', height: '100%', borderRadius: 20 }}
+                          resizeMode="cover"
+                        />
+                      </Animated.View>
+                    </Animated.View>
+                  );
+                })}
+              </Animated.ScrollView>
+
+              {/* Dots */}
+              <View style={styles.carouselDots}>
+                {outfits.map((_, i) => (
+                  <View
+                    key={`dot-${i}`}
+                    style={[styles.carouselDot, i === currentOutfitIndex ? styles.carouselDotActive : null]}
                   />
-                </View>
-                
-                <TouchableOpacity 
-                  style={styles.navArrow} 
-                  onPress={() => navigateOutfit('next')}
-                >
-                  <IconSymbol name="chevron.right" size={24} color={colors.text} />
-                </TouchableOpacity>
+                ))}
               </View>
-              
-              <Text style={[styles.outfitDescription, { color: colors.text }]}>
-                {outfits[currentOutfitIndex]?.description || 'Outfit recommendation'}
-              </Text>
             </View>
           ) : (
             // Default state - greeting
@@ -681,6 +790,28 @@ const styles = StyleSheet.create({
   safeAreaContainer: {
     flex: 1,
     justifyContent: 'space-between',
+  },
+  header: {
+    paddingHorizontal: 25,
+    paddingVertical: 25,
+    alignItems: 'flex-start',
+  },
+  menuButton: {
+    width: 24,
+    height: 18,
+    justifyContent: 'space-between',
+  },
+  hamburgerLine: {
+    backgroundColor: '#000000',
+    borderRadius: 3.0,
+  },
+  hamburgerLineLong: {
+    width: 24,
+    height: 4.5,
+  },
+  hamburgerLineShort: {
+    width: 16,
+    height: 4.5,
   },
   cardContainer: {
     flex: 1,
@@ -774,6 +905,43 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
     marginBottom: 20,
+  },
+  // Carousel styles
+  carouselContent: {
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  carouselCardWrapper: {
+    width: 220, // SNAP_INTERVAL value (260 + (-40))
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  carouselCard: {
+    width: 260, // CARD_WIDTH value
+    height: 364, // CARD_HEIGHT value (260 * 1.4)
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  carouselDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  carouselDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    marginHorizontal: 6,
+  },
+  carouselDotActive: {
+    backgroundColor: '#333',
   },
   navArrow: {
     width: 40,
